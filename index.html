@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Súly BLE – ESP32</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      margin-top: 50px;
+      background: #f0f0f0;
+    }
+    h1 {
+      font-size: 2em;
+    }
+    #suly {
+      font-size: 4em;
+      color: green;
+      margin-top: 20px;
+    }
+    button {
+      font-size: 1.2em;
+      padding: 10px 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Súlymérés Bluetooth-on</h1>
+  <div id="suly">-- kg</div>
+  <button onclick="connectBLE()">Csatlakozás</button>
+
+  <script>
+    let bleCharacteristic;
+
+    async function connectBLE() {
+      try {
+        const device = await navigator.bluetooth.requestDevice({
+          filters: [{ name: 'ESP32_SULYMERO' }],
+          optionalServices: ['4fafc201-1fb5-459e-8fcc-c5c9c331914b']
+        });
+
+        const server = await device.gatt.connect();
+        const service = await server.getPrimaryService('4fafc201-1fb5-459e-8fcc-c5c9c331914b');
+        bleCharacteristic = await service.getCharacteristic('beb5483e-36e1-4688-b7f5-ea07361b26a8');
+
+        await bleCharacteristic.startNotifications();
+        bleCharacteristic.addEventListener('characteristicvaluechanged', handleData);
+
+        alert("Sikeresen csatlakozott az ESP32-hez.");
+      } catch (error) {
+        alert("Hiba történt: " + error);
+      }
+    }
+
+    function handleData(event) {
+      const value = new TextDecoder().decode(event.target.value);
+      document.getElementById('suly').innerText = value.trim() + " kg";
+    }
+  </script>
+</body>
+</html>
